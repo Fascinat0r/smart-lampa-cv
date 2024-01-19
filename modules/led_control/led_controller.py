@@ -162,9 +162,13 @@ class LedController:
     def run(self):
         print('Led Controller: Running', flush=True)
         while True:
-            if self.pipe.poll():
-                action = self.pipe.recv()
-                print(f'Led_Controller: got {action}', flush=True)
-                if action in self.reactions:
-                    self.action = action
-                    self.reactions[action]()
+            try:
+                if self.pipe.poll():
+                    action = self.pipe.recv()
+                    print(f'Led_Controller: got {action}', flush=True)
+                    if action in self.reactions:
+                        self.action = action
+                        self.reactions[action]()
+            except Exception as e:
+                print("Led Controller: ", e.args)
+

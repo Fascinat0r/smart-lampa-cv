@@ -83,8 +83,11 @@ class MainController:
     def run(self):
         print('Main Controller: Running', flush=True)
         while True:
-            if self.button_pipe.poll():
-                action = ButtonAction(self.button_pipe.recv())
-                print(f'>Main Controller got {action}', flush=True)
-                if action in self.button_reactions:
-                    self.button_reactions[action]()
+            try:
+                if self.button_pipe.poll():
+                    action = ButtonAction(self.button_pipe.recv())
+                    print(f'>Main Controller got {action}', flush=True)
+                    if action in self.button_reactions:
+                        self.button_reactions[action]()
+            except Exception as e:
+                print("Main Controller: ", e.args)

@@ -33,9 +33,9 @@ def get_state(btn: Button, buttons: tuple):
         case ButtonStatus.EB_HOLD:
             # print("Hold")
             if btn.getClicks():
-                return ButtonAction.L_CLICK_HOLD.value+button_prefix
+                return ButtonAction.L_CLICK_HOLD.value + button_prefix
             else:
-                return ButtonAction.L_HOLD.value+button_prefix
+                return ButtonAction.L_HOLD.value + button_prefix
         # case ButtonStatus.EB_STEP:
         #     print("Step")
         # case ButtonStatus.EB_RELEASE:
@@ -94,5 +94,8 @@ def run(conn):
     button_l.attach(lambda: button_handler(conn, button_l, buttons))
     button_r.attach(lambda: button_handler(conn, button_r, buttons))
     while True:
-        button_l.tick()
-        button_r.tick()
+        try:
+            button_l.tick()
+            button_r.tick()
+        except Exception as e:
+            print("Button controller:", e.args)
