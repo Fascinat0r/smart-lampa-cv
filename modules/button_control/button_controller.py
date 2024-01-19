@@ -89,19 +89,11 @@ def button_handler(conn: Pipe, btn: Button, buttons: tuple[Button, Button]):
 def run(conn):
     print("Button controller: Running", flush=True)
     button_l = Button(PIN_BUTTON_L)
-    print('1')
     button_r = Button(PIN_BUTTON_R)
-    print('2')
     buttons = (button_l, button_r)
-    print('3')
     button_l.attach(lambda: button_handler(conn, button_l, buttons))
-    print('4')
     button_r.attach(lambda: button_handler(conn, button_r, buttons))
-    print('5')
     while True:
-        print('6')
         button_l.tick()
-        print('7')
         button_r.tick()
-        print('8')
-    print('9')
+
