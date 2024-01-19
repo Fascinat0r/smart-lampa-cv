@@ -1,7 +1,9 @@
 from PIL import ImageColor
 
-from config.settings import LED_NUM
+from config.settings import LED_NUM, BRIGHTNESS_DELTA, VALUE_DELTA
+from main_controller.LampMode import LampMode
 from modules.led_control.LedActions import LedAction
+from modules.led_control.utils import value_to_temp, value_to_color
 
 spidev_import = False
 try:
@@ -10,7 +12,7 @@ try:
 
     spidev_import = True
 except ImportError:
-    print("Can't import spidev")
+    print("Led_Controller: Can't import spidev")
 
 
 class LedController:
@@ -18,7 +20,8 @@ class LedController:
         self.action = None
         self.reactions = None
         self.brightness = 255
-        self.value = 0
+        self.values = [0] * len(LampMode)
+        self.mode: LampMode = LampMode.LIGHT_TEMPERATURE
         self.last_led_sequence = [[0, 0, 0]] * LED_NUM
 
         self.is_on = False
@@ -30,6 +33,7 @@ class LedController:
             self.spi = spidev.SpiDev()
             self.spi.open(0, 0)
         self.setup_reactions()
+        self.update()
 
     def setup_reactions(self):
         pass
@@ -39,13 +43,13 @@ class LedController:
             LedAction.MODE_TEMP: self.set_mode,
             LedAction.MODE_COLOR: self.set_mode,
             LedAction.MODE_DYNAMIC_COLOR: self.set_mode,
-            LedAction.MODE_EFFECTS: self.set_mode
+            LedAction.MODE_EFFECTS: self.set_mode,
+
+            LedAction.BRIGHTNESS_UP: self.brightness_up,
+            LedAction.BRIGHTNESS_DOWN: self.brightness_down,
             #
-            # LedAction.CHANGE_BRIGHTNESS: None,
-            # LedAction.SET_BRIGHTNESS: None,
-            #
-            # LedAction.CHANGE_VALUE: None,
-            # LedAction.SET_VALUE: None,
+            LedAction.VALUE_UP: self.value_up,
+            LedAction.VALUE_DOWN: self.value_down,
         }
 
     def power_on(self):
@@ -59,7 +63,29 @@ class LedController:
             self.is_on = True
 
     def set_mode(self):
+        self.mode = self.action
+        self.update()
         pass
+
+    def brightness_up(self):
+        self.brightness = min(self.brightness + BRIGHTNESS_DELTA, 255)
+        print('Led_Controller: brightness ', self.brightness)
+        self.update()
+
+    def brightness_down(self):
+        self.brightness = max(self.brightness - BRIGHTNESS_DELTA, 0)
+        print('Led_Controller: brightness ', self.brightness)
+        self.update()
+
+    def value_up(self):
+        self.values[self.mode.value] = min(self.values[self.mode.value] + VALUE_DELTA, 255)
+        print('Led_Controller: value ', self.values[self.mode.value])
+        self.update()
+
+    def value_down(self):
+        self.values[self.mode.value] = max(self.values[self.mode.value] - VALUE_DELTA, 0)
+        print('Led_Controller: value ', self.values[self.mode.value])
+        self.update()
 
     def fill(self, led_sequence):
         """
@@ -74,13 +100,15 @@ class LedController:
         # Check if the length of the input sequence matches the number of LEDs
         if len(led_sequence) != LED_NUM:
             raise ValueError(
-                f"An array of size {LED_NUM} was expected, an array of size {len(led_sequence)} was received.")
+                f"Led_Controller: An array of size {LED_NUM} was expected, an array of size {len(led_sequence)} was received.")
         self.last_led_sequence = led_sequence
+        koef_brightness = self.brightness / 255
+        led_sequence = [[item * koef_brightness for item in sublist] for sublist in led_sequence]
         # Send the color data to the LED strip
         if self.spi:
             ws2812.write2812(self.spi, led_sequence)
         else:
-            print("OUT: ", led_sequence)
+            print("Led_Controller: OUT: ", led_sequence)
 
     def fill_hex_color(self, hex_color: str):
         """
@@ -118,12 +146,25 @@ class LedController:
         if self.spi:
             ws2812.off_leds(self.spi, LED_NUM)
 
+    def update(self):
+        match self.mode:
+            case LampMode.LIGHT_TEMPERATURE:
+                color = value_to_temp(self.values[LampMode.LIGHT_TEMPERATURE.value])
+                self.fill_color(*color)
+            case LampMode.COLORED_LIGHT:
+                color = value_to_color(self.values[LampMode.COLORED_LIGHT.value])
+                self.fill_color(*color)
+            case LampMode.DYNAMIC_COLOR:
+                pass
+            case LampMode.EFFECTS:
+                pass
+
     def run(self):
         print('Led Controller: Running', flush=True)
         while True:
             if self.pipe.poll():
                 action = self.pipe.recv()
-                print(f'>Main Controller got {action}', flush=True)
+                print(f'Led_Controller: got {action}', flush=True)
                 if action in self.reactions:
                     self.action = action
                     self.reactions[action]()

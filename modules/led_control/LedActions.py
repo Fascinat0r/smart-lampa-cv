@@ -10,11 +10,10 @@ class LedAction(Enum):
     MODE_DYNAMIC_COLOR = 4
     MODE_EFFECTS = 5
 
-    CHANGE_BRIGHTNESS = 6
-    SET_BRIGHTNESS = 7
+    BRIGHTNESS_UP = 6
+    BRIGHTNESS_DOWN = 7
 
-    CHANGE_VALUE = 6
-    SET_VALUE = 7
-
+    VALUE_UP = 8
+    VALUE_DOWN = 9
 
 

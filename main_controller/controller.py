@@ -1,13 +1,19 @@
 # consume work
+import time
 from multiprocessing.connection import Connection
+from threading import Thread
 
+from config.settings import LED_CMD_DELAY
 from main_controller.LampMode import LampMode
 from modules.button_control.ButtonActions import ButtonAction
+from modules.led_control.LedActions import LedAction
 
 
 # Main controller process
 class MainController:
     def __init__(self, b_pipe: Connection, l_pipe: Connection):
+        self.changing_led = None
+        self.led_thread = None
         self.button_reactions = None
         self.button_pipe = b_pipe
         self.led_pipe = l_pipe
@@ -18,12 +24,12 @@ class MainController:
         self.button_reactions = {
             ButtonAction.L_CLICK: self.toggle_mode_backward,
             ButtonAction.R_CLICK: self.toggle_mode_forward,
-            ButtonAction.L_HOLD: self.start_brightness_up,
-            ButtonAction.R_HOLD: self.start_brightness_down,
+            ButtonAction.L_HOLD: self.start_brightness_down,
+            ButtonAction.R_HOLD: self.start_brightness_up,
             ButtonAction.L_REL_HOLD: self.stop_change,
             ButtonAction.R_REL_HOLD: self.stop_change,
-            ButtonAction.L_CLICK_HOLD: self.start_intensity_up,
-            ButtonAction.R_CLICK_HOLD: self.start_intensity_down,
+            ButtonAction.L_CLICK_HOLD: self.start_intensity_down,
+            ButtonAction.R_CLICK_HOLD: self.start_intensity_up,
             ButtonAction.L_SWIPE: self.swipe_function,
             ButtonAction.R_SWIPE: self.swipe_function
         }
@@ -40,25 +46,36 @@ class MainController:
         print(f"mode {self.current_mode}")
 
     def start_brightness_up(self):
-        # Logic to start changing brightness
-        pass
+        # Start a new thread for brightness up
+        self.led_thread = Thread(target=self._led_change, args=(LedAction.BRIGHTNESS_UP,))
+        self.led_thread.start()
 
     def start_brightness_down(self):
-        # Logic to start changing brightness
-        pass
+        # Start a new thread for brightness down
+        self.led_thread = Thread(target=self._led_change, args=(LedAction.BRIGHTNESS_DOWN,))
+        self.led_thread.start()
+
+    def _led_change(self, action):
+        self.changing_led = True
+        while self.changing_led:
+            self.led_pipe.send(action)
+            print("change led:", action)
+            time.sleep(LED_CMD_DELAY)
 
     def stop_change(self):
-        # Logic to stop changing anything
-        pass
+        # Stop the brightness change
+        self.changing_led = False
+        if hasattr(self, 'led_thread'):
+            self.led_thread.join()
 
     def start_intensity_up(self):
-        # Logic to start changing intensity/color temperature
-        pass
+        self.led_thread = Thread(target=self._led_change, args=(LedAction.VALUE_UP,))
+        self.led_thread.start()
 
     def start_intensity_down(self):
-        # Logic to start changing intensity/color temperature
-        pass
-
+        self.led_thread = Thread(target=self._led_change, args=(LedAction.VALUE_DOWN,))
+        self.led_thread.start()
+    
     def swipe_function(self):
         # Placeholder for swipe function
         pass
