@@ -160,11 +160,22 @@ class LedController:
                 pass
 
     def run(self):
+        print('1')
         print('Led Controller: Running', flush=True)
+        print('2')
         while True:
+            print('3')
             if self.pipe.poll():
+                print('4')
                 action = self.pipe.recv()
+                print('5')
                 print(f'Led_Controller: got {action}', flush=True)
+                print('6')
                 if action in self.reactions:
+                    print('7')
                     self.action = action
+                    print('8')
                     self.reactions[action]()
+                    print('9')
+
+        print('10')
